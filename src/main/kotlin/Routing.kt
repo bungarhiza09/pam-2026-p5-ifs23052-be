@@ -50,7 +50,7 @@ fun Application.configureRouting() {
 
     routing {
         get("/") {
-            call.respondText("API telah berjalan. By Bunga Rhiza Sitorus.")
+            call.respondText("API telah berjalan. Dibuat oleh Abdullah Ubaid.")
         }
 
         // Route Auth
@@ -91,9 +91,6 @@ fun Application.configureRouting() {
             route("/todos") {
                 get {
                     todoService.getAll(call)
-                }
-                get("/stats") {
-                    todoService.getStats(call)
                 }
                 post {
                     todoService.post(call)

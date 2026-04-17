@@ -38,8 +38,6 @@ class UserService(
                     id = user.id,
                     name = user.name,
                     username = user.username,
-                    photo = user.photo,
-                    bio = user.bio,
                     createdAt = user.createdAt,
                     updatedAt = user.updatedAt,
                 ),
@@ -72,7 +70,6 @@ class UserService(
 
         user.username = request.username
         user.name = request.name
-        user.bio = request.bio
         val isUpdated = userRepo.update(
             user.id,
             user
@@ -107,13 +104,11 @@ class UserService(
                     val fileName = UUID.randomUUID().toString() + ext
                     val filePath = "uploads/users/$fileName"
 
-                    withContext(Dispatchers.IO) {
-                        val file = File(filePath)
-                        file.parentFile.mkdirs() // pastikan folder ada
+                    val file = File(filePath)
+                    file.parentFile.mkdirs() // pastikan folder ada
 
-                        part.provider().copyAndClose(file.writeChannel())
-                        newPhoto = filePath
-                    }
+                    part.provider().copyAndClose(file.writeChannel())
+                    newPhoto = filePath
                 }
 
                 else -> {}

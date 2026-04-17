@@ -10,15 +10,13 @@ data class AuthRequest(
     var username: String = "",
     var password: String = "",
     var newPassword: String = "",
-    var bio: String? = null,
 ){
     fun toMap(): Map<String, Any?> {
         return mapOf(
             "name" to name,
             "username" to username,
             "password" to password,
-            "newPassword" to newPassword,
-            "bio" to bio
+            "newPassword" to newPassword
         )
     }
 
@@ -27,7 +25,6 @@ data class AuthRequest(
             name = name,
             username = username,
             password = password,
-            bio = bio,
             updatedAt = Clock.System.now()
         )
     }

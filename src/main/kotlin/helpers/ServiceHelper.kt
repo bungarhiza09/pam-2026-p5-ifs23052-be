@@ -8,7 +8,7 @@ import org.delcom.entities.User
 import org.delcom.repositories.IUserRepository
 
 object ServiceHelper {
-     suspend fun getAuthUser(call: ApplicationCall, userRepository: IUserRepository): User {
+    suspend fun getAuthUser(call: ApplicationCall, userRepository: IUserRepository): User {
         val principal = call.principal<JWTPrincipal>()
             ?: throw AppException(401, "Unauthorized")
 

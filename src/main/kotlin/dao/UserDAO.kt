@@ -13,7 +13,6 @@ class UserDAO(id: EntityID<UUID>) : Entity<UUID>(id) {
     var username by UserTable.username
     var password by UserTable.password
     var photo by UserTable.photo
-    var bio by UserTable.bio
     var createdAt by UserTable.createdAt
     var updatedAt by UserTable.updatedAt
 }

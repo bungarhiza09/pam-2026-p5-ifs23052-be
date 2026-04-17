@@ -15,7 +15,6 @@ class TodoDAO(id: EntityID<UUID>) : Entity<UUID>(id) {
     var description by TodoTable.description
     var cover by TodoTable.cover
     var isDone by TodoTable.isDone
-    var urgency by TodoTable.urgency // Tambahkan ini
     var createdAt by TodoTable.createdAt
     var updatedAt by TodoTable.updatedAt
 }

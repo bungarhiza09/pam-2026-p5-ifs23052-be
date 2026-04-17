@@ -5,54 +5,68 @@ import org.delcom.entities.Todo
 import org.delcom.helpers.suspendTransaction
 import org.delcom.helpers.todoDAOToModel
 import org.delcom.tables.TodoTable
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.lowerCase
 import java.util.*
 
-class TodoRepository : ITodoRepository {
+class TodoRepository(private val baseUrl: String) : ITodoRepository {
+
+    // Bangun kondisi query agar tidak duplikasi kode
+    private fun buildCondition(
+        userId: String,
+        search: String,
+        isDone: Boolean?
+    ): org.jetbrains.exposed.sql.Op<Boolean> {
+        var condition = (TodoTable.userId eq UUID.fromString(userId))
+
+        if (search.isNotBlank()) {
+            val keyword = "%${search.lowercase()}%"
+            condition = condition and (TodoTable.title.lowerCase() like keyword)
+        }
+
+        if (isDone != null) {
+            condition = condition and (TodoTable.isDone eq isDone)
+        }
+
+        return condition
+    }
+
     override suspend fun getAll(
         userId: String,
         search: String,
         isDone: Boolean?,
-        urgency: String?,
         page: Int,
         perPage: Int
     ): List<Todo> = suspendTransaction {
-        val userUuid = UUID.fromString(userId)
         val offset = ((page - 1) * perPage).toLong()
-        
-        TodoDAO.find {
-            var op: Op<Boolean> = TodoTable.userId eq userUuid
-            
-            if (search.isNotBlank()) {
-                op = op and (TodoTable.title.lowerCase() like "%${search.lowercase()}%")
-            }
 
-            if (isDone != null) {
-                op = op and (TodoTable.isDone eq isDone)
-            }
+        TodoDAO
+            .find { buildCondition(userId, search, isDone) }
+            .orderBy(TodoTable.createdAt to SortOrder.DESC)
+            .limit(perPage)   // ✅ tidak deprecated
+            .offset(offset)   // ✅ tidak deprecated
+            .map { todoDAOToModel(it, baseUrl) }
+    }
 
-            if (!urgency.isNullOrBlank()) {
-                op = op and (TodoTable.urgency eq urgency)
-            }
-            op
-        }.orderBy(
-            if (search.isNotBlank()) TodoTable.title to SortOrder.ASC
-            else TodoTable.createdAt to SortOrder.DESC
-        )
-        .limit(perPage)
-        .offset(offset)
-        .map(::todoDAOToModel)
+    override suspend fun count(
+        userId: String,
+        search: String,
+        isDone: Boolean?
+    ): Long = suspendTransaction {
+        TodoDAO
+            .find { buildCondition(userId, search, isDone) }
+            .count()
     }
 
     override suspend fun getById(todoId: String): Todo? = suspendTransaction {
         TodoDAO
-            .find {
-                TodoTable.id eq UUID.fromString(todoId)
-            }
+            .find { TodoTable.id eq UUID.fromString(todoId) }
             .limit(1)
-            .map(::todoDAOToModel)
+            .map { todoDAOToModel(it, baseUrl) }
             .firstOrNull()
     }
 
@@ -63,11 +77,9 @@ class TodoRepository : ITodoRepository {
             description = todo.description
             cover = todo.cover
             isDone = todo.isDone
-            urgency = todo.urgency
             createdAt = todo.createdAt
             updatedAt = todo.updatedAt
         }
-
         todoDAO.id.value.toString()
     }
 
@@ -85,7 +97,6 @@ class TodoRepository : ITodoRepository {
             todoDAO.description = newTodo.description
             todoDAO.cover = newTodo.cover
             todoDAO.isDone = newTodo.isDone
-            todoDAO.urgency = newTodo.urgency
             todoDAO.updatedAt = newTodo.updatedAt
             true
         } else {
@@ -95,23 +106,9 @@ class TodoRepository : ITodoRepository {
 
     override suspend fun delete(userId: String, todoId: String): Boolean = suspendTransaction {
         val rowsDeleted = TodoTable.deleteWhere {
-            (TodoTable.id eq UUID.fromString(todoId)) and (TodoTable.userId eq UUID.fromString(userId))
+            (TodoTable.id eq UUID.fromString(todoId)) and
+                    (TodoTable.userId eq UUID.fromString(userId))
         }
         rowsDeleted >= 1
     }
-
-    override suspend fun getStats(userId: String): Map<String, Long> = suspendTransaction {
-        val userUuid = UUID.fromString(userId)
-        
-        val total = TodoDAO.find { TodoTable.userId eq userUuid }.count()
-        val finished = TodoDAO.find { (TodoTable.userId eq userUuid) and (TodoTable.isDone eq true) }.count()
-        val unfinished = TodoDAO.find { (TodoTable.userId eq userUuid) and (TodoTable.isDone eq false) }.count()
-
-        mapOf(
-            "total" to total,
-            "finished" to finished,
-            "unfinished" to unfinished
-        )
-    }
-
 }
