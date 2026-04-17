@@ -13,6 +13,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.delcom.data.AppException
 import org.delcom.data.DataResponse
+import org.delcom.data.Meta
+import org.delcom.data.TodoListResponse
 import org.delcom.data.TodoRequest
 import org.delcom.helpers.ServiceHelper
 import org.delcom.helpers.ValidatorHelper
@@ -47,16 +49,16 @@ class TodoService(
         val totalPending = todoRepo.count(user.id, search, false)
 
         val response = DataResponse(
-            "success",
-            "Berhasil mengambil daftar todo saya",
-            mapOf(
-                "todos" to todos,
-                "meta" to mapOf(
-                    "page" to page,
-                    "perPage" to perPage,
-                    "total" to totalAll,
-                    "totalDone" to totalDone,
-                    "totalPending" to totalPending
+            status = "success",
+            message = "Berhasil mengambil daftar todo saya",
+            data = TodoListResponse(
+                todos = todos,
+                meta = Meta(
+                    page = page,
+                    perPage = perPage,
+                    total = totalAll,
+                    totalDone = totalDone,
+                    totalPending = totalPending
                 )
             )
         )
