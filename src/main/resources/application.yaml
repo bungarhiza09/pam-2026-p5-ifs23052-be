@@ -15,3 +15,6 @@ ktor:
 
   jwt:
     secret: "${JWT_SECRET}"
+
+  app:
+    baseUrl: ${APP_URL}
