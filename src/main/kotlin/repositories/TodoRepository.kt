@@ -15,12 +15,42 @@ import java.util.*
 
 class TodoRepository(private val baseUrl: String) : ITodoRepository {
 
-    // Bangun kondisi query agar tidak duplikasi kode
-    private fun buildCondition(
+    override suspend fun getAll(
+        userId: String,
+        search: String,
+        isDone: Boolean?,
+        page: Int,
+        perPage: Int
+    ): List<Todo> = suspendTransaction {
+        val offset = ((page - 1) * perPage).toLong()
+
+        var query = TodoDAO.find {
+            var condition = (TodoTable.userId eq UUID.fromString(userId))
+
+            if (search.isNotBlank()) {
+                val keyword = "%${search.lowercase()}%"
+                condition = condition and (TodoTable.title.lowerCase() like keyword)
+            }
+
+            if (isDone != null) {
+                condition = condition and (TodoTable.isDone eq isDone)
+            }
+
+            condition
+        }
+
+        query
+            .orderBy(TodoTable.createdAt to SortOrder.DESC)
+            .limit(perPage)   // ✅ pakai TodoDAO, tidak deprecated
+            .offset(offset)   // ✅ pakai TodoDAO, tidak deprecated
+            .map { todoDAOToModel(it, baseUrl) }  // ✅ pakai todoDAOToModel bukan todoRowToModel
+    }
+
+    override suspend fun count(
         userId: String,
         search: String,
         isDone: Boolean?
-    ): org.jetbrains.exposed.sql.Op<Boolean> {
+    ): Long = suspendTransaction {
         var condition = (TodoTable.userId eq UUID.fromString(userId))
 
         if (search.isNotBlank()) {
@@ -32,34 +62,7 @@ class TodoRepository(private val baseUrl: String) : ITodoRepository {
             condition = condition and (TodoTable.isDone eq isDone)
         }
 
-        return condition
-    }
-
-    override suspend fun getAll(
-        userId: String,
-        search: String,
-        isDone: Boolean?,
-        page: Int,
-        perPage: Int
-    ): List<Todo> = suspendTransaction {
-        val offset = ((page - 1) * perPage).toLong()
-
-        TodoDAO
-            .find { buildCondition(userId, search, isDone) }
-            .orderBy(TodoTable.createdAt to SortOrder.DESC)
-            .limit(perPage)   // ✅ tidak deprecated
-            .offset(offset)   // ✅ tidak deprecated
-            .map { todoDAOToModel(it, baseUrl) }
-    }
-
-    override suspend fun count(
-        userId: String,
-        search: String,
-        isDone: Boolean?
-    ): Long = suspendTransaction {
-        TodoDAO
-            .find { buildCondition(userId, search, isDone) }
-            .count()
+        TodoDAO.find { condition }.count()
     }
 
     override suspend fun getById(todoId: String): Todo? = suspendTransaction {
